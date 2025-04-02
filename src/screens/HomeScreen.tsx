@@ -6,7 +6,6 @@ import {
   FlatList,
   Image,
   TouchableOpacity,
-  ActivityIndicator,
   RefreshControl,
   SafeAreaView,
   ScrollView,
@@ -18,6 +17,10 @@ import { useAuth } from "../contexts/AuthContext";
 import { useTheme } from "../contexts/ThemeContext";
 import { getRecommendedMovies } from "../services/DatabaseService";
 import { getPopularMovies, getTrendingMovies, getImageUrl } from "../api/tmdb";
+import { useApi } from "../hooks/useApi";
+import ErrorDisplay from "../components/ErrorDisplay";
+import MovieSkeleton from "../components/MovieSkeleton";
+import NetworkStatusBar from "../components/NetworkStatusBar";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "Main">;
 
@@ -35,51 +38,57 @@ const HomeScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
   const { user } = useAuth();
   const { theme } = useTheme();
-  const [trendingMovies, setTrendingMovies] = useState<Movie[]>([]);
-  const [recommendedMovies, setRecommendedMovies] = useState<Movie[]>([]);
-  const [popularMovies, setPopularMovies] = useState<Movie[]>([]);
-  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const fetchMovies = async () => {
-    try {
-      setLoading(true);
+  // Use separate API hooks for each data source
+  const {
+    data: trendingMovies,
+    loading: trendingLoading,
+    error: trendingError,
+    execute: fetchTrending,
+  } = useApi<any, []>(() => getTrendingMovies());
 
-      // Get trending movies from TMDb
-      const trendingData = await getTrendingMovies();
-      setTrendingMovies(trendingData.results);
+  const {
+    data: popularMovies,
+    loading: popularLoading,
+    error: popularError,
+    execute: fetchPopular,
+  } = useApi<any, []>(() => getPopularMovies());
 
-      // Get popular movies from TMDb
-      const popularData = await getPopularMovies();
-      setPopularMovies(popularData.results);
+  const {
+    data: recommendedMovies,
+    loading: recommendedLoading,
+    error: recommendedError,
+    execute: fetchRecommended,
+  } = useApi<Movie[], [string]>((userId) => getRecommendedMovies(userId));
 
-      // Get personalized recommendations if user is logged in
-      if (user) {
-        const recommended = await getRecommendedMovies(user.uid);
-        setRecommendedMovies(recommended);
-      }
-    } catch (error) {
-      console.error("Error fetching movies:", error);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
+  // Fetch all movie data
+  const fetchAllMovies = async () => {
+    fetchTrending();
+    fetchPopular();
+
+    if (user) {
+      fetchRecommended(user.uid);
     }
   };
 
+  // Initial data loading
   useEffect(() => {
-    fetchMovies();
+    fetchAllMovies();
   }, [user]);
 
-  const onRefresh = () => {
+  // Handle refresh
+  const handleRefresh = async () => {
     setRefreshing(true);
-    fetchMovies();
+    await fetchAllMovies();
+    setRefreshing(false);
   };
 
   const handleMoviePress = (movieId: number) => {
     navigation.navigate("MovieDetail", { movieId });
   };
 
-  // Fixed renderItem function to ensure all text is within Text components
+  // Render movie item component
   const renderMovieItem = ({ item }: { item: Movie }) => (
     <TouchableOpacity
       style={styles.movieCard}
@@ -108,46 +117,60 @@ const HomeScreen: React.FC = () => {
     </TouchableOpacity>
   );
 
+  // Movie list section component
   const MovieList = ({
     title,
     data,
+    loading,
+    error,
+    onRetry,
     horizontal = true,
   }: {
     title: string;
-    data: Movie[];
+    data: Movie[] | null;
+    loading: boolean;
+    error: string | null;
+    onRetry: () => void;
     horizontal?: boolean;
   }) => (
     <View style={styles.sectionContainer}>
       <Text style={[styles.sectionTitle, { color: theme.text }]}>{title}</Text>
-      <FlatList
-        horizontal={horizontal}
-        data={data}
-        keyExtractor={(item) => item.id.toString()}
-        showsHorizontalScrollIndicator={false}
-        renderItem={renderMovieItem}
-      />
+
+      {loading ? (
+        <MovieSkeleton horizontal={horizontal} />
+      ) : error ? (
+        <ErrorDisplay
+          message={`Couldn't load ${title.toLowerCase()}`}
+          onRetry={onRetry}
+        />
+      ) : data && data.length > 0 ? (
+        <FlatList
+          horizontal={horizontal}
+          data={data}
+          keyExtractor={(item) => item.id.toString()}
+          showsHorizontalScrollIndicator={false}
+          renderItem={renderMovieItem}
+        />
+      ) : (
+        <Text style={[styles.emptyText, { color: theme.secondaryText }]}>
+          No movies available
+        </Text>
+      )}
     </View>
   );
 
-  if (loading && !refreshing) {
-    return (
-      <View
-        style={[styles.loadingContainer, { backgroundColor: theme.background }]}
-      >
-        <ActivityIndicator size="large" color={theme.primary} />
-      </View>
-    );
-  }
-
+  // Main render
   return (
     <SafeAreaView
       style={[styles.container, { backgroundColor: theme.background }]}
     >
+      <NetworkStatusBar />
+
       <ScrollView
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
-            onRefresh={onRefresh}
+            onRefresh={handleRefresh}
             colors={[theme.primary]}
             tintColor={theme.primary}
           />
@@ -159,13 +182,31 @@ const HomeScreen: React.FC = () => {
           </Text>
         </View>
 
-        <MovieList title="Trending Today" data={trendingMovies} />
+        <MovieList
+          title="Trending Today"
+          data={trendingMovies?.results}
+          loading={trendingLoading}
+          error={trendingError}
+          onRetry={() => fetchTrending()}
+        />
 
-        {recommendedMovies.length > 0 && (
-          <MovieList title="Recommended For You" data={recommendedMovies} />
+        {user && (
+          <MovieList
+            title="Recommended For You"
+            data={recommendedMovies}
+            loading={recommendedLoading}
+            error={recommendedError}
+            onRetry={() => fetchRecommended(user.uid)}
+          />
         )}
 
-        <MovieList title="Popular Movies" data={popularMovies} />
+        <MovieList
+          title="Popular Movies"
+          data={popularMovies?.results}
+          loading={popularLoading}
+          error={popularError}
+          onRetry={() => fetchPopular()}
+        />
       </ScrollView>
     </SafeAreaView>
   );
@@ -174,11 +215,6 @@ const HomeScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
   },
   header: {
     padding: 16,
@@ -214,6 +250,11 @@ const styles = StyleSheet.create({
   movieRating: {
     fontSize: 12,
     marginTop: 2,
+  },
+  emptyText: {
+    padding: 16,
+    textAlign: "center",
+    fontStyle: "italic",
   },
 });
 

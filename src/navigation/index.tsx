@@ -1,3 +1,4 @@
+// src/navigation/index.tsx
 import React from "react";
 import {
   NavigationContainer,
@@ -10,20 +11,30 @@ import { useAuthState } from "../hooks/useAuth";
 import { useTheme } from "../contexts/ThemeContext";
 import { Ionicons } from "@expo/vector-icons";
 
-// Screens
+// Main Screens
 import HomeScreen from "../screens/HomeScreen";
 import SearchScreen from "../screens/SearchScreen";
 import WatchlistScreen from "../screens/WatchlistScreen";
 import ProfileScreen from "../screens/ProfileScreen";
 import MovieDetailScreen from "../screens/MovieDetailScreen";
+
+// Auth Screens
 import LoginScreen from "../screens/auth/LoginScreen";
 import RegisterScreen from "../screens/auth/RegisterScreen";
 import LoadingScreen from "../screens/LoadingScreen";
+
+// Settings Screens
+import ProfileEditScreen from "../screens/settings/ProfileEditScreen";
+import NotificationSettingsScreen from "../screens/settings/NotificationSettingsScreen";
+import PrivacySettingsScreen from "../screens/settings/PrivacySettingsScreen";
 
 // Stack Types
 export type RootStackParamList = {
   Main: undefined;
   MovieDetail: { movieId: number };
+  ProfileEdit: undefined;
+  NotificationSettings: undefined;
+  PrivacySettings: undefined;
 };
 
 export type AuthStackParamList = {
@@ -120,24 +131,22 @@ const AppNavigator = () => {
       {user ? (
         <Stack.Navigator
           screenOptions={{
-            headerStyle: {
-              backgroundColor: theme.card,
-            },
-            headerTintColor: theme.text,
+            headerShown: false,
             contentStyle: {
               backgroundColor: theme.background,
             },
           }}
         >
+          <Stack.Screen name="Main" component={TabNavigator} />
+          <Stack.Screen name="MovieDetail" component={MovieDetailScreen} />
+          <Stack.Screen name="ProfileEdit" component={ProfileEditScreen} />
           <Stack.Screen
-            name="Main"
-            component={TabNavigator}
-            options={{ headerShown: false }}
+            name="NotificationSettings"
+            component={NotificationSettingsScreen}
           />
           <Stack.Screen
-            name="MovieDetail"
-            component={MovieDetailScreen}
-            options={{ title: "" }}
+            name="PrivacySettings"
+            component={PrivacySettingsScreen}
           />
         </Stack.Navigator>
       ) : (

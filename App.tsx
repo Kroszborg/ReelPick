@@ -5,6 +5,7 @@ import { AuthProvider } from "./src/contexts/AuthContext";
 import { ThemeProvider, useTheme } from "./src/contexts/ThemeContext";
 import AppNavigator from "./src/navigation";
 import { LogBox } from "react-native";
+import NetworkStatusBar from "./src/components/NetworkStatusBar";
 
 // Ignore specific warnings that might come from third-party libraries
 LogBox.ignoreLogs([
@@ -21,6 +22,7 @@ const AppContent = () => {
     <SafeAreaProvider>
       <StatusBar style={isDark ? "light" : "dark"} />
       <AuthProvider>
+        <NetworkStatusBar />
         <AppNavigator />
       </AuthProvider>
     </SafeAreaProvider>

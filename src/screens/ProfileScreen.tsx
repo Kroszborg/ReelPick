@@ -11,6 +11,7 @@ import {
   RefreshControl,
   ScrollView,
   ActivityIndicator,
+  SectionList,
 } from "react-native";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -21,6 +22,8 @@ import { getWatchedMovies, UserMovie } from "../services/DatabaseService";
 import { getImageUrl } from "../api/tmdb";
 import { Ionicons } from "@expo/vector-icons";
 import ThemeToggle from "../components/ThemeToggle";
+import ErrorDisplay from "../components/ErrorDisplay";
+import { useApi } from "../hooks/useApi";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "Main">;
 
@@ -28,41 +31,80 @@ const ProfileScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
   const { user, logout } = useAuth();
   const { theme } = useTheme();
-  const [watchedMovies, setWatchedMovies] = useState<UserMovie[]>([]);
-  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [stats, setStats] = useState({
+    totalWatched: 0,
+    favorites: 0,
+    averageRating: 0,
+    topGenres: [] as { name: string; count: number }[],
+    totalWatchTime: 0, // In minutes
+  });
 
-  const fetchWatchedMovies = async () => {
+  // Use API hook for fetching watched movies
+  const {
+    data: watchedMovies,
+    loading,
+    error,
+    execute: fetchWatchedMovies,
+  } = useApi<UserMovie[], [string]>((userId) => getWatchedMovies(userId));
+
+  const loadMovies = useCallback(async () => {
     if (!user) return;
+    return fetchWatchedMovies(user.uid);
+  }, [user, fetchWatchedMovies]);
 
-    try {
-      setLoading(true);
-      const data = await getWatchedMovies(user.uid);
-      // Sort by recently watched
-      const sortedData = [...data].sort((a, b) => {
-        const dateA = a.watchedDate ? new Date(a.watchedDate) : new Date(0);
-        const dateB = b.watchedDate ? new Date(b.watchedDate) : new Date(0);
-        return dateB.getTime() - dateA.getTime();
+  // Calculate stats from watched movies
+  useEffect(() => {
+    if (watchedMovies && watchedMovies.length > 0) {
+      // Count total watched movies
+      const totalWatched = watchedMovies.length;
+
+      // Count favorites (rated 4 or higher)
+      const favorites = watchedMovies.filter(
+        (m) => m.rating && m.rating >= 4
+      ).length;
+
+      // Calculate average rating
+      const totalRating = watchedMovies.reduce(
+        (sum, movie) => sum + (movie.rating || 0),
+        0
+      );
+      const averageRating = totalRating / totalWatched;
+
+      // Set the calculated stats
+      setStats({
+        totalWatched,
+        favorites,
+        averageRating,
+        topGenres: [], // Would need genre data from API
+        totalWatchTime: 0, // Would need runtime data from API
       });
-      setWatchedMovies(sortedData);
-    } catch (error) {
-      console.error("Error fetching watched movies:", error);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
+    } else {
+      setStats({
+        totalWatched: 0,
+        favorites: 0,
+        averageRating: 0,
+        topGenres: [],
+        totalWatchTime: 0,
+      });
     }
-  };
+  }, [watchedMovies]);
 
-  // Fetch watched movies when screen is focused
+  // Only fetch movies when screen is first focused or on manual refresh
+  // This prevents constant re-fetching and auto-updates
   useFocusEffect(
     useCallback(() => {
-      fetchWatchedMovies();
-    }, [user])
+      // Only load if we don't have data yet or if explicitly refreshing
+      if (!watchedMovies && !loading) {
+        loadMovies();
+      }
+    }, [watchedMovies, loading, loadMovies])
   );
 
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
     setRefreshing(true);
-    fetchWatchedMovies();
+    await loadMovies();
+    setRefreshing(false);
   };
 
   const handleMoviePress = (movieId: number) => {
@@ -140,6 +182,83 @@ const ProfileScreen: React.FC = () => {
     </TouchableOpacity>
   );
 
+  // Navigate to appropriate settings screens
+  const handleSettingsNavigation = (key: string) => {
+    switch (key) {
+      case "profile":
+        navigation.navigate("ProfileEdit");
+        break;
+      case "notifications":
+        navigation.navigate("NotificationSettings");
+        break;
+      case "privacy":
+        navigation.navigate("PrivacySettings");
+        break;
+      case "logout":
+        handleLogout();
+        break;
+      default:
+        break;
+    }
+  };
+
+  // Settings sections data
+  const settingsSections = [
+    {
+      title: "Appearance",
+      data: [{ key: "theme" }],
+    },
+    {
+      title: "Account",
+      data: [
+        { key: "profile", title: "Edit Profile", icon: "person-outline" },
+        {
+          key: "notifications",
+          title: "Notifications",
+          icon: "notifications-outline",
+        },
+        { key: "privacy", title: "Privacy", icon: "shield-outline" },
+        {
+          key: "logout",
+          title: "Logout",
+          icon: "log-out-outline",
+          danger: true,
+        },
+      ],
+    },
+  ];
+
+  // Render a settings item
+  const renderSettingsItem = ({ item }: { item: any }) => {
+    if (item.key === "theme") {
+      return <ThemeToggle containerStyle={{ marginBottom: 0 }} />;
+    }
+
+    return (
+      <TouchableOpacity
+        style={[styles.settingsItem, { borderBottomColor: theme.border }]}
+        onPress={() => handleSettingsNavigation(item.key)}
+      >
+        <View style={styles.settingsIcon}>
+          <Ionicons
+            name={item.icon}
+            size={22}
+            color={item.danger ? theme.error : theme.icon}
+          />
+        </View>
+        <Text
+          style={[
+            styles.settingsText,
+            { color: item.danger ? theme.error : theme.text },
+          ]}
+        >
+          {item.title}
+        </Text>
+        <Ionicons name="chevron-forward" size={22} color={theme.icon} />
+      </TouchableOpacity>
+    );
+  };
+
   return (
     <SafeAreaView
       style={[styles.container, { backgroundColor: theme.background }]}
@@ -160,17 +279,12 @@ const ProfileScreen: React.FC = () => {
             </Text>
           </View>
         </View>
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <Text style={[styles.logoutText, { color: theme.primary }]}>
-            Logout
-          </Text>
-        </TouchableOpacity>
       </View>
 
       <View style={[styles.statsContainer, { backgroundColor: theme.card }]}>
         <View style={styles.statItem}>
           <Text style={[styles.statValue, { color: theme.text }]}>
-            {watchedMovies.length}
+            {stats.totalWatched}
           </Text>
           <Text style={[styles.statLabel, { color: theme.secondaryText }]}>
             Watched
@@ -178,7 +292,7 @@ const ProfileScreen: React.FC = () => {
         </View>
         <View style={styles.statItem}>
           <Text style={[styles.statValue, { color: theme.text }]}>
-            {watchedMovies.filter((m) => m.rating && m.rating >= 4).length}
+            {stats.favorites}
           </Text>
           <Text style={[styles.statLabel, { color: theme.secondaryText }]}>
             Favorites
@@ -186,12 +300,7 @@ const ProfileScreen: React.FC = () => {
         </View>
         <View style={styles.statItem}>
           <Text style={[styles.statValue, { color: theme.text }]}>
-            {(
-              watchedMovies.reduce(
-                (sum, movie) => sum + (movie.rating || 0),
-                0
-              ) / (watchedMovies.length || 1)
-            ).toFixed(1)}
+            {stats.averageRating.toFixed(1)}
           </Text>
           <Text style={[styles.statLabel, { color: theme.secondaryText }]}>
             Avg Rating
@@ -199,66 +308,81 @@ const ProfileScreen: React.FC = () => {
         </View>
       </View>
 
-      {/* Theme Toggle Section */}
-      <ThemeToggle containerStyle={{ marginHorizontal: 16, marginTop: 16 }} />
-
-      <View
-        style={[styles.sectionHeader, { backgroundColor: theme.background }]}
+      <ScrollView
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+        }
       >
-        <Text style={[styles.sectionTitle, { color: theme.text }]}>
-          Recently Watched
-        </Text>
-      </View>
-
-      {loading && !refreshing ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={theme.primary} />
-        </View>
-      ) : (
-        <FlatList
-          data={watchedMovies}
-          keyExtractor={(item) => `${item.id}`}
-          renderItem={renderMovieItem}
-          contentContainerStyle={styles.moviesList}
-          horizontal={false}
-          numColumns={2}
-          columnWrapperStyle={styles.moviesRow}
-          ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <Ionicons
-                name="film-outline"
-                size={64}
-                color={theme.secondaryText}
-              />
-              <Text style={[styles.emptyText, { color: theme.text }]}>
-                No watched movies yet
-              </Text>
-              <Text
-                style={[styles.emptySubtext, { color: theme.secondaryText }]}
-              >
-                Movies you've watched will appear here
-              </Text>
-              <TouchableOpacity
-                style={[
-                  styles.exploreButton,
-                  { backgroundColor: theme.primary },
-                ]}
-                onPress={() => navigation.navigate("Main")}
-              >
-                <Text style={styles.exploreButtonText}>Explore Movies</Text>
-              </TouchableOpacity>
-            </View>
-          }
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={handleRefresh}
-              colors={[theme.primary]}
-              tintColor={theme.primary}
-            />
-          }
+        {/* Settings Section */}
+        <SectionList
+          sections={settingsSections}
+          keyExtractor={(item) => item.key}
+          renderItem={renderSettingsItem}
+          renderSectionHeader={({ section: { title } }) => (
+            <Text
+              style={[
+                styles.sectionHeader,
+                {
+                  color: theme.secondaryText,
+                  backgroundColor: theme.background,
+                },
+              ]}
+            >
+              {title.toUpperCase()}
+            </Text>
+          )}
+          stickySectionHeadersEnabled={false}
+          scrollEnabled={false}
+          style={styles.settingsList}
         />
-      )}
+
+        {/* Recently Watched Section */}
+        <View style={styles.sectionContainer}>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>
+            Recently Watched
+          </Text>
+        </View>
+
+        {loading && !refreshing ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={theme.primary} />
+          </View>
+        ) : error ? (
+          <ErrorDisplay
+            message="Couldn't load your watched movies"
+            onRetry={() => loadMovies()}
+          />
+        ) : watchedMovies && watchedMovies.length > 0 ? (
+          <FlatList
+            data={watchedMovies.slice(0, 10)} // Show only most recent 10
+            keyExtractor={(item) => `${item.id}`}
+            renderItem={renderMovieItem}
+            contentContainerStyle={styles.moviesList}
+            horizontal={false}
+            scrollEnabled={false}
+          />
+        ) : (
+          <View style={styles.emptyContainer}>
+            <Ionicons
+              name="film-outline"
+              size={64}
+              color={theme.secondaryText}
+            />
+            <Text style={[styles.emptyText, { color: theme.text }]}>
+              No watched movies yet
+            </Text>
+            <Text style={[styles.emptySubtext, { color: theme.secondaryText }]}>
+              Movies you've watched will appear here
+            </Text>
+            <TouchableOpacity
+              style={[styles.exploreButton, { backgroundColor: theme.primary }]}
+              onPress={() => navigation.navigate("Main")}
+            >
+              <Text style={styles.exploreButtonText}>Explore Movies</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </ScrollView>
     </SafeAreaView>
   );
 };
@@ -326,26 +450,48 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginTop: 4,
   },
+  settingsList: {
+    marginVertical: 16,
+  },
   sectionHeader: {
+    fontSize: 12,
+    fontWeight: "bold",
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 8,
+  },
+  settingsItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+  },
+  settingsIcon: {
+    width: 30,
+  },
+  settingsText: {
+    flex: 1,
+    fontSize: 16,
+    marginLeft: 8,
+  },
+  sectionContainer: {
     padding: 16,
+    paddingBottom: 8,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: "bold",
   },
   loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
+    padding: 20,
     alignItems: "center",
   },
   moviesList: {
-    padding: 8,
-  },
-  moviesRow: {
-    justifyContent: "space-between",
+    padding: 16,
   },
   movieItem: {
-    width: "48%",
+    flexDirection: "row",
     marginBottom: 16,
     borderRadius: 8,
     overflow: "hidden",
@@ -356,14 +502,15 @@ const styles = StyleSheet.create({
     shadowRadius: 1.5,
   },
   moviePoster: {
-    width: "100%",
-    height: 180,
+    width: 80,
+    height: 120,
   },
   movieInfo: {
-    padding: 8,
+    flex: 1,
+    padding: 12,
   },
   movieTitle: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: "bold",
   },
   ratingContainer: {
@@ -374,15 +521,14 @@ const styles = StyleSheet.create({
     marginRight: 2,
   },
   reviewText: {
-    fontSize: 12,
+    fontSize: 13,
     fontStyle: "italic",
     marginTop: 4,
   },
   emptyContainer: {
-    flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    paddingTop: 100,
+    padding: 40,
   },
   emptyText: {
     fontSize: 18,
