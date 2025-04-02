@@ -9,11 +9,13 @@ import {
   Platform,
   ActivityIndicator,
   Alert,
+  SafeAreaView,
 } from "react-native";
 import { useAuth } from "../../contexts/AuthContext";
 import { useTheme } from "../../contexts/ThemeContext";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { AuthStackParamList } from "../../navigation";
+import BackButton from "../../components/BackButton";
 
 type Props = NativeStackScreenProps<AuthStackParamList, "Register">;
 
@@ -49,91 +51,100 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
+    <SafeAreaView
       style={[styles.container, { backgroundColor: theme.background }]}
     >
-      <View style={styles.formContainer}>
-        <Text style={[styles.title, { color: theme.primary }]}>
+      <View style={[styles.header, { backgroundColor: theme.background }]}>
+        <BackButton onPress={() => navigation.navigate("Login")} />
+        <Text style={[styles.headerTitle, { color: theme.text }]}>
           Create Account
         </Text>
-        <Text style={[styles.subtitle, { color: theme.secondaryText }]}>
-          Join ReelPick today
-        </Text>
-
-        <TextInput
-          style={[
-            styles.input,
-            {
-              backgroundColor: theme.inputBackground,
-              borderColor: theme.border,
-              color: theme.text,
-            },
-          ]}
-          placeholder="Username"
-          placeholderTextColor={theme.secondaryText}
-          value={username}
-          onChangeText={setUsername}
-          autoCapitalize="none"
-        />
-
-        <TextInput
-          style={[
-            styles.input,
-            {
-              backgroundColor: theme.inputBackground,
-              borderColor: theme.border,
-              color: theme.text,
-            },
-          ]}
-          placeholder="Email"
-          placeholderTextColor={theme.secondaryText}
-          value={email}
-          onChangeText={setEmail}
-          autoCapitalize="none"
-          keyboardType="email-address"
-        />
-
-        <TextInput
-          style={[
-            styles.input,
-            {
-              backgroundColor: theme.inputBackground,
-              borderColor: theme.border,
-              color: theme.text,
-            },
-          ]}
-          placeholder="Password"
-          placeholderTextColor={theme.secondaryText}
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-        />
-
-        <TouchableOpacity
-          style={[styles.button, { backgroundColor: theme.primary }]}
-          onPress={handleRegister}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.buttonText}>Create Account</Text>
-          )}
-        </TouchableOpacity>
-
-        <View style={styles.loginContainer}>
-          <Text style={[styles.loginText, { color: theme.secondaryText }]}>
-            Already have an account?{" "}
-          </Text>
-          <TouchableOpacity onPress={() => navigation.navigate("Login")}>
-            <Text style={[styles.loginLink, { color: theme.primary }]}>
-              Login
-            </Text>
-          </TouchableOpacity>
-        </View>
+        <View style={styles.rightPlaceholder} />
       </View>
-    </KeyboardAvoidingView>
+
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={styles.formContainer}
+      >
+        <View style={styles.formContent}>
+          <Text style={[styles.subtitle, { color: theme.secondaryText }]}>
+            Join ReelPick today
+          </Text>
+
+          <TextInput
+            style={[
+              styles.input,
+              {
+                backgroundColor: theme.inputBackground,
+                borderColor: theme.border,
+                color: theme.text,
+              },
+            ]}
+            placeholder="Username"
+            placeholderTextColor={theme.secondaryText}
+            value={username}
+            onChangeText={setUsername}
+            autoCapitalize="none"
+          />
+
+          <TextInput
+            style={[
+              styles.input,
+              {
+                backgroundColor: theme.inputBackground,
+                borderColor: theme.border,
+                color: theme.text,
+              },
+            ]}
+            placeholder="Email"
+            placeholderTextColor={theme.secondaryText}
+            value={email}
+            onChangeText={setEmail}
+            autoCapitalize="none"
+            keyboardType="email-address"
+          />
+
+          <TextInput
+            style={[
+              styles.input,
+              {
+                backgroundColor: theme.inputBackground,
+                borderColor: theme.border,
+                color: theme.text,
+              },
+            ]}
+            placeholder="Password"
+            placeholderTextColor={theme.secondaryText}
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+          />
+
+          <TouchableOpacity
+            style={[styles.button, { backgroundColor: theme.primary }]}
+            onPress={handleRegister}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.buttonText}>Create Account</Text>
+            )}
+          </TouchableOpacity>
+
+          <View style={styles.loginContainer}>
+            <Text style={[styles.loginText, { color: theme.secondaryText }]}>
+              Already have an account?{" "}
+            </Text>
+            <TouchableOpacity onPress={() => navigation.navigate("Login")}>
+              <Text style={[styles.loginLink, { color: theme.primary }]}>
+                Login
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 };
 
@@ -141,19 +152,34 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: 16,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    flex: 1,
+    textAlign: "center",
+    marginRight: 40, // To balance with the back button
+  },
+  rightPlaceholder: {
+    width: 40,
+  },
   formContainer: {
     flex: 1,
-    justifyContent: "center",
-    padding: 20,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: "bold",
-    marginBottom: 8,
+  formContent: {
+    flex: 1,
+    padding: 20,
+    justifyContent: "center",
   },
   subtitle: {
     fontSize: 16,
     marginBottom: 24,
+    textAlign: "center",
   },
   input: {
     borderRadius: 8,

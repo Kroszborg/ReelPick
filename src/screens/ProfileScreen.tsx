@@ -12,6 +12,7 @@ import {
   ScrollView,
   ActivityIndicator,
   SectionList,
+  StatusBar,
 } from "react-native";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -30,7 +31,7 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList, "Main">;
 const ProfileScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
   const { user, logout } = useAuth();
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
   const [refreshing, setRefreshing] = useState(false);
   const [stats, setStats] = useState({
     totalWatched: 0,
@@ -39,6 +40,7 @@ const ProfileScreen: React.FC = () => {
     topGenres: [] as { name: string; count: number }[],
     totalWatchTime: 0, // In minutes
   });
+  
 
   // Use API hook for fetching watched movies
   const {
@@ -53,6 +55,14 @@ const ProfileScreen: React.FC = () => {
     return fetchWatchedMovies(user.uid);
   }, [user, fetchWatchedMovies]);
 
+
+  const uniqueWatchedMovies = watchedMovies
+    ? watchedMovies.slice(0, 10).map((movie, index) => ({
+        ...movie,
+        uniqueId: `${movie.id}-${index}-${Date.now()}`,
+      }))
+    : [];
+    
   // Calculate stats from watched movies
   useEffect(() => {
     if (watchedMovies && watchedMovies.length > 0) {
@@ -263,14 +273,16 @@ const ProfileScreen: React.FC = () => {
     <SafeAreaView
       style={[styles.container, { backgroundColor: theme.background }]}
     >
-      <View style={[styles.header, { backgroundColor: theme.card }]}>
-        <View style={styles.profileHeader}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
+
+      <View style={[styles.profileHeader, { backgroundColor: theme.card }]}>
+        <View style={styles.profileInfo}>
           <View style={styles.avatarContainer}>
             <Text style={styles.avatarText}>
               {user?.displayName?.[0] || user?.email?.[0] || "U"}
             </Text>
           </View>
-          <View style={styles.profileInfo}>
+          <View style={styles.userInfo}>
             <Text style={[styles.username, { color: theme.text }]}>
               {user?.displayName || "Movie Lover"}
             </Text>
@@ -354,8 +366,8 @@ const ProfileScreen: React.FC = () => {
           />
         ) : watchedMovies && watchedMovies.length > 0 ? (
           <FlatList
-            data={watchedMovies.slice(0, 10)} // Show only most recent 10
-            keyExtractor={(item) => `${item.id}`}
+            data={uniqueWatchedMovies}
+            keyExtractor={(item) => item.uniqueId}
             renderItem={renderMovieItem}
             contentContainerStyle={styles.moviesList}
             horizontal={false}
@@ -391,20 +403,18 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    padding: 16,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
   profileHeader: {
+    padding: 16,
+    paddingVertical: 24,
+  },
+  profileInfo: {
     flexDirection: "row",
     alignItems: "center",
   },
   avatarContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 70,
+    height: 70,
+    borderRadius: 35,
     backgroundColor: "#E50914",
     justifyContent: "center",
     alignItems: "center",
@@ -415,23 +425,17 @@ const styles = StyleSheet.create({
     color: "#fff",
     textTransform: "uppercase",
   },
-  profileInfo: {
+  userInfo: {
     marginLeft: 16,
+    flex: 1,
   },
   username: {
-    fontSize: 18,
+    fontSize: 22,
     fontWeight: "bold",
   },
   email: {
     fontSize: 14,
     marginTop: 2,
-  },
-  logoutButton: {
-    padding: 8,
-  },
-  logoutText: {
-    fontSize: 16,
-    fontWeight: "500",
   },
   statsContainer: {
     flexDirection: "row",

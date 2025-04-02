@@ -9,6 +9,7 @@ import {
   Platform,
   ActivityIndicator,
   Alert,
+  SafeAreaView,
 } from "react-native";
 import { useAuth } from "../../contexts/AuthContext";
 import { useTheme } from "../../contexts/ThemeContext";
@@ -43,75 +44,79 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
+    <SafeAreaView
       style={[styles.container, { backgroundColor: theme.background }]}
     >
-      <View style={styles.formContainer}>
-        <Text style={[styles.title, { color: theme.primary }]}>
-          Welcome to ReelPick
-        </Text>
-        <Text style={[styles.subtitle, { color: theme.secondaryText }]}>
-          Sign in to continue
-        </Text>
-
-        <TextInput
-          style={[
-            styles.input,
-            {
-              backgroundColor: theme.inputBackground,
-              borderColor: theme.border,
-              color: theme.text,
-            },
-          ]}
-          placeholder="Email"
-          placeholderTextColor={theme.secondaryText}
-          value={email}
-          onChangeText={setEmail}
-          autoCapitalize="none"
-          keyboardType="email-address"
-        />
-
-        <TextInput
-          style={[
-            styles.input,
-            {
-              backgroundColor: theme.inputBackground,
-              borderColor: theme.border,
-              color: theme.text,
-            },
-          ]}
-          placeholder="Password"
-          placeholderTextColor={theme.secondaryText}
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-        />
-
-        <TouchableOpacity
-          style={[styles.button, { backgroundColor: theme.primary }]}
-          onPress={handleLogin}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.buttonText}>Login</Text>
-          )}
-        </TouchableOpacity>
-
-        <View style={styles.registerContainer}>
-          <Text style={[styles.registerText, { color: theme.secondaryText }]}>
-            Don't have an account?{" "}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={styles.formContainer}
+      >
+        <View style={styles.formContent}>
+          <Text style={[styles.title, { color: theme.primary }]}>
+            Welcome to ReelPick
           </Text>
-          <TouchableOpacity onPress={() => navigation.navigate("Register")}>
-            <Text style={[styles.registerLink, { color: theme.primary }]}>
-              Sign up
-            </Text>
+          <Text style={[styles.subtitle, { color: theme.secondaryText }]}>
+            Sign in to continue
+          </Text>
+
+          <TextInput
+            style={[
+              styles.input,
+              {
+                backgroundColor: theme.inputBackground,
+                borderColor: theme.border,
+                color: theme.text,
+              },
+            ]}
+            placeholder="Email"
+            placeholderTextColor={theme.secondaryText}
+            value={email}
+            onChangeText={setEmail}
+            autoCapitalize="none"
+            keyboardType="email-address"
+          />
+
+          <TextInput
+            style={[
+              styles.input,
+              {
+                backgroundColor: theme.inputBackground,
+                borderColor: theme.border,
+                color: theme.text,
+              },
+            ]}
+            placeholder="Password"
+            placeholderTextColor={theme.secondaryText}
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+          />
+
+          <TouchableOpacity
+            style={[styles.button, { backgroundColor: theme.primary }]}
+            onPress={handleLogin}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.buttonText}>Login</Text>
+            )}
           </TouchableOpacity>
+
+          <View style={styles.registerContainer}>
+            <Text style={[styles.registerText, { color: theme.secondaryText }]}>
+              Don't have an account?{" "}
+            </Text>
+            <TouchableOpacity onPress={() => navigation.navigate("Register")}>
+              <Text style={[styles.registerLink, { color: theme.primary }]}>
+                Sign up
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 };
 
@@ -121,17 +126,22 @@ const styles = StyleSheet.create({
   },
   formContainer: {
     flex: 1,
+  },
+  formContent: {
+    flex: 1,
     justifyContent: "center",
     padding: 20,
   },
   title: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: "bold",
     marginBottom: 8,
+    textAlign: "center",
   },
   subtitle: {
     fontSize: 16,
     marginBottom: 24,
+    textAlign: "center",
   },
   input: {
     borderRadius: 8,

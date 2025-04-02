@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   Platform,
   TouchableWithoutFeedback,
   Keyboard,
+  BackHandler,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../contexts/ThemeContext";
@@ -46,6 +47,25 @@ const RatingModal: React.FC<RatingModalProps> = ({
     }
   }, [visible, initialRating, initialReview]);
 
+  // Handle Android back button
+  const handleBackPress = useCallback(() => {
+    if (visible) {
+      onClose();
+      return true;
+    }
+    return false;
+  }, [visible, onClose]);
+
+  useEffect(() => {
+    // Add event listener for Android hardware back button
+    BackHandler.addEventListener("hardwareBackPress", handleBackPress);
+
+    // Clean up event listener
+    return () => {
+      BackHandler.removeEventListener("hardwareBackPress", handleBackPress);
+    };
+  }, [handleBackPress]);
+
   const handleSave = () => {
     onSave(rating, review);
   };
@@ -56,6 +76,7 @@ const RatingModal: React.FC<RatingModalProps> = ({
       transparent={true}
       animationType="slide"
       onRequestClose={onClose}
+      statusBarTranslucent={true}
     >
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <KeyboardAvoidingView
@@ -71,7 +92,11 @@ const RatingModal: React.FC<RatingModalProps> = ({
                 <Text style={[styles.title, { color: theme.text }]}>
                   {isUpdate ? "Update Rating" : "Rate This Movie"}
                 </Text>
-                <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+                <TouchableOpacity
+                  onPress={onClose}
+                  style={styles.closeButton}
+                  hitSlop={{ top: 15, right: 15, bottom: 15, left: 15 }}
+                >
                   <Ionicons name="close" size={24} color={theme.icon} />
                 </TouchableOpacity>
               </View>

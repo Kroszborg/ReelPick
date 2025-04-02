@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -10,8 +10,9 @@ import {
   ActivityIndicator,
   SafeAreaView,
   Keyboard,
+  StatusBar,
 } from "react-native";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../navigation";
 import { useTheme } from "../contexts/ThemeContext";
@@ -31,21 +32,38 @@ interface Movie {
 
 const SearchScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Movie[]>([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
+  const [previousQuery, setPreviousQuery] = useState("");
 
-  const handleSearch = async () => {
-    if (!query.trim()) return;
+  // Restore previous search state when returning to this screen
+  useFocusEffect(
+    useCallback(() => {
+      // If we had a previous search and the query is empty, restore it
+      if (previousQuery && !query) {
+        setQuery(previousQuery);
+        handleSearch(previousQuery, false);
+      }
+    }, [previousQuery])
+  );
+
+  const handleSearch = async (searchQuery = query, updatePrevious = true) => {
+    if (!searchQuery.trim()) return;
 
     try {
       setLoading(true);
       Keyboard.dismiss();
-      const data = await searchMovies(query);
+      const data = await searchMovies(searchQuery);
       setResults(data.results);
       setSearched(true);
+
+      // Save the query for when we return to this screen
+      if (updatePrevious) {
+        setPreviousQuery(searchQuery);
+      }
     } catch (error) {
       console.error("Error searching movies:", error);
     } finally {
@@ -55,6 +73,13 @@ const SearchScreen: React.FC = () => {
 
   const handleMoviePress = (movieId: number) => {
     navigation.navigate("MovieDetail", { movieId });
+  };
+
+  const clearSearch = () => {
+    setQuery("");
+    setResults([]);
+    setSearched(false);
+    setPreviousQuery("");
   };
 
   const renderMovieItem = ({ item }: { item: Movie }) => (
@@ -98,27 +123,61 @@ const SearchScreen: React.FC = () => {
     <SafeAreaView
       style={[styles.container, { backgroundColor: theme.background }]}
     >
-      <View style={[styles.searchContainer, { backgroundColor: theme.card }]}>
-        <TextInput
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
+
+      <View
+        style={[styles.customHeader, { backgroundColor: theme.background }]}
+      >
+        <Text style={[styles.headerTitle, { color: theme.text }]}>Search</Text>
+      </View>
+
+      <View
+        style={[styles.searchContainer, { backgroundColor: theme.background }]}
+      >
+        <View
           style={[
-            styles.searchInput,
+            styles.inputContainer,
             {
               backgroundColor: theme.inputBackground,
-              color: theme.text,
+              borderColor: theme.border,
             },
           ]}
-          placeholder="Search for movies..."
-          placeholderTextColor={theme.secondaryText}
-          value={query}
-          onChangeText={setQuery}
-          onSubmitEditing={handleSearch}
-          returnKeyType="search"
-        />
+        >
+          <Ionicons
+            name="search"
+            size={22}
+            color={theme.secondaryText}
+            style={styles.searchIcon}
+          />
+          <TextInput
+            style={[
+              styles.searchInput,
+              {
+                color: theme.text,
+              },
+            ]}
+            placeholder="Search for movies..."
+            placeholderTextColor={theme.secondaryText}
+            value={query}
+            onChangeText={setQuery}
+            onSubmitEditing={() => handleSearch()}
+            returnKeyType="search"
+          />
+          {query.length > 0 && (
+            <TouchableOpacity onPress={clearSearch} style={styles.clearButton}>
+              <Ionicons
+                name="close-circle"
+                size={22}
+                color={theme.secondaryText}
+              />
+            </TouchableOpacity>
+          )}
+        </View>
         <TouchableOpacity
           style={[styles.searchButton, { backgroundColor: theme.primary }]}
-          onPress={handleSearch}
+          onPress={() => handleSearch()}
         >
-          <Ionicons name="search" size={24} color="#fff" />
+          <Text style={styles.searchButtonText}>Search</Text>
         </TouchableOpacity>
       </View>
 
@@ -135,18 +194,38 @@ const SearchScreen: React.FC = () => {
           ListEmptyComponent={
             searched ? (
               <View style={styles.emptyContainer}>
+                <Ionicons
+                  name="search-outline"
+                  size={64}
+                  color={theme.secondaryText}
+                />
                 <Text
                   style={[styles.emptyText, { color: theme.secondaryText }]}
                 >
                   No movies found
                 </Text>
+                <Text
+                  style={[styles.emptySubtext, { color: theme.secondaryText }]}
+                >
+                  Try a different search term
+                </Text>
               </View>
             ) : (
               <View style={styles.emptyContainer}>
+                <Ionicons
+                  name="film-outline"
+                  size={64}
+                  color={theme.secondaryText}
+                />
                 <Text
                   style={[styles.emptyText, { color: theme.secondaryText }]}
                 >
                   Search for your favorite movies
+                </Text>
+                <Text
+                  style={[styles.emptySubtext, { color: theme.secondaryText }]}
+                >
+                  Find movies by title, actor, or director
                 </Text>
               </View>
             )
@@ -161,24 +240,50 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  customHeader: {
+    padding: 16,
+    paddingBottom: 8,
+  },
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: "bold",
+  },
   searchContainer: {
     flexDirection: "row",
     padding: 16,
+    alignItems: "center",
+  },
+  inputContainer: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    height: 48,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  searchIcon: {
+    marginLeft: 12,
   },
   searchInput: {
     flex: 1,
     height: 48,
-    borderRadius: 8,
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
     fontSize: 16,
   },
+  clearButton: {
+    padding: 8,
+  },
   searchButton: {
-    width: 48,
     height: 48,
     borderRadius: 8,
     marginLeft: 8,
     justifyContent: "center",
     alignItems: "center",
+    paddingHorizontal: 16,
+  },
+  searchButtonText: {
+    color: "#fff",
+    fontWeight: "bold",
   },
   loadingContainer: {
     flex: 1,
@@ -229,7 +334,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   emptyText: {
-    fontSize: 16,
+    fontSize: 18,
+    fontWeight: "bold",
+    marginTop: 16,
+  },
+  emptySubtext: {
+    fontSize: 14,
+    marginTop: 8,
+    textAlign: "center",
+    paddingHorizontal: 20,
   },
 });
 

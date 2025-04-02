@@ -10,6 +10,7 @@ import {
   Alert,
   SafeAreaView,
   RefreshControl,
+  BackHandler,
 } from "react-native";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -33,6 +34,9 @@ const WatchlistScreen: React.FC = () => {
   const [watchlist, setWatchlist] = useState<Movie[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [lastNavigatedMovieId, setLastNavigatedMovieId] = useState<
+    number | null
+  >(null);
 
   const fetchWatchlist = async () => {
     if (!user) return;
@@ -53,6 +57,17 @@ const WatchlistScreen: React.FC = () => {
   useFocusEffect(
     useCallback(() => {
       fetchWatchlist();
+
+      // Add back button handler for Android
+      const backHandler = BackHandler.addEventListener(
+        "hardwareBackPress",
+        () => {
+          // Always let the default back behavior happen here
+          return false;
+        }
+      );
+
+      return () => backHandler.remove();
     }, [user])
   );
 
@@ -62,6 +77,7 @@ const WatchlistScreen: React.FC = () => {
   };
 
   const handleMoviePress = (movieId: number) => {
+    setLastNavigatedMovieId(movieId);
     navigation.navigate("MovieDetail", { movieId });
   };
 
@@ -78,6 +94,7 @@ const WatchlistScreen: React.FC = () => {
         },
         {
           text: "Remove",
+          style: "destructive",
           onPress: async () => {
             try {
               await removeFromWatchlist(user.uid, movieId);
@@ -87,17 +104,26 @@ const WatchlistScreen: React.FC = () => {
               Alert.alert("Error", "Failed to remove movie from watchlist.");
             }
           },
-          style: "destructive",
         },
       ]
     );
   };
 
   const renderMovieItem = ({ item }: { item: Movie }) => (
-    <View style={[styles.movieItem, { backgroundColor: theme.card }]}>
+    <View
+      style={[
+        styles.movieItem,
+        {
+          backgroundColor: theme.card,
+          borderColor:
+            lastNavigatedMovieId === item.id ? theme.primary : "transparent",
+        },
+      ]}
+    >
       <TouchableOpacity
         style={styles.movieContent}
         onPress={() => handleMoviePress(item.id)}
+        activeOpacity={0.7}
       >
         <Image
           source={{
@@ -129,6 +155,7 @@ const WatchlistScreen: React.FC = () => {
       <TouchableOpacity
         style={styles.removeButton}
         onPress={() => handleRemoveMovie(item.id)}
+        hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}
       >
         <Ionicons name="trash-outline" size={24} color={theme.primary} />
       </TouchableOpacity>
@@ -149,15 +176,23 @@ const WatchlistScreen: React.FC = () => {
     <SafeAreaView
       style={[styles.container, { backgroundColor: theme.background }]}
     >
-      <View style={[styles.header, { backgroundColor: theme.card }]}>
-        <Text style={[styles.title, { color: theme.text }]}>My Watchlist</Text>
-      </View>
-
       <FlatList
         data={watchlist}
         keyExtractor={(item) => item.id.toString()}
         renderItem={renderMovieItem}
         contentContainerStyle={styles.listContent}
+        ListHeaderComponent={
+          <View style={[styles.header, { backgroundColor: theme.card }]}>
+            <Text style={[styles.title, { color: theme.text }]}>
+              My Watchlist
+            </Text>
+            {watchlist.length > 0 && (
+              <Text style={[styles.count, { color: theme.secondaryText }]}>
+                {watchlist.length} {watchlist.length === 1 ? "movie" : "movies"}
+              </Text>
+            )}
+          </View>
+        }
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Ionicons
@@ -198,10 +233,15 @@ const styles = StyleSheet.create({
   },
   header: {
     padding: 16,
+    marginBottom: 8,
   },
   title: {
     fontSize: 20,
     fontWeight: "bold",
+  },
+  count: {
+    fontSize: 14,
+    marginTop: 4,
   },
   loadingContainer: {
     flex: 1,
@@ -209,11 +249,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   listContent: {
-    padding: 16,
+    paddingBottom: 16,
   },
   movieItem: {
     flexDirection: "row",
     alignItems: "center",
+    marginHorizontal: 16,
     marginBottom: 16,
     borderRadius: 8,
     overflow: "hidden",
@@ -222,6 +263,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.2,
     shadowRadius: 1.5,
+    borderWidth: 2,
   },
   movieContent: {
     flex: 1,

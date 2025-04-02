@@ -9,6 +9,7 @@ import {
   RefreshControl,
   SafeAreaView,
   ScrollView,
+  StatusBar,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -37,7 +38,7 @@ interface Movie {
 const HomeScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
   const { user } = useAuth();
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
   const [refreshing, setRefreshing] = useState(false);
 
   // Use separate API hooks for each data source
@@ -164,6 +165,7 @@ const HomeScreen: React.FC = () => {
     <SafeAreaView
       style={[styles.container, { backgroundColor: theme.background }]}
     >
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
       <NetworkStatusBar />
 
       <ScrollView
@@ -176,7 +178,7 @@ const HomeScreen: React.FC = () => {
           />
         }
       >
-        <View style={[styles.header, { backgroundColor: theme.card }]}>
+        <View style={[styles.header, { backgroundColor: theme.background }]}>
           <Text style={[styles.appName, { color: theme.primary }]}>
             ReelPick
           </Text>
@@ -220,7 +222,7 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   appName: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: "bold",
   },
   sectionContainer: {

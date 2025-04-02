@@ -10,6 +10,7 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { useAuthState } from "../hooks/useAuth";
 import { useTheme } from "../contexts/ThemeContext";
 import { Ionicons } from "@expo/vector-icons";
+import HeaderLeft from "../components/HeaderLeft";
 
 // Main Screens
 import HomeScreen from "../screens/HomeScreen";
@@ -54,6 +55,7 @@ const TabNavigator = () => {
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
+        headerShown: false, // Remove headers from tab screens
         tabBarIcon: ({ focused, color, size }) => {
           let iconName: any;
           if (route.name === "Home") {
@@ -73,10 +75,6 @@ const TabNavigator = () => {
           backgroundColor: theme.card,
           borderTopColor: theme.border,
         },
-        headerStyle: {
-          backgroundColor: theme.card,
-        },
-        headerTintColor: theme.text,
       })}
     >
       <Tab.Screen name="Home" component={HomeScreen} />
@@ -99,7 +97,21 @@ const AuthNavigator = () => {
       }}
     >
       <AuthStack.Screen name="Login" component={LoginScreen} />
-      <AuthStack.Screen name="Register" component={RegisterScreen} />
+      <AuthStack.Screen
+        name="Register"
+        component={RegisterScreen}
+        options={({ navigation }) => ({
+          headerShown: true,
+          headerTitle: "Create Account",
+          headerLeft: () => (
+            <HeaderLeft onPress={() => navigation.navigate("Login")} />
+          ),
+          headerStyle: {
+            backgroundColor: theme.card,
+          },
+          headerTintColor: theme.text,
+        })}
+      />
     </AuthStack.Navigator>
   );
 };
@@ -130,23 +142,42 @@ const AppNavigator = () => {
     <NavigationContainer theme={navigationTheme}>
       {user ? (
         <Stack.Navigator
-          screenOptions={{
-            headerShown: false,
+          screenOptions={({ navigation }) => ({
+            headerShown: true,
             contentStyle: {
               backgroundColor: theme.background,
             },
-          }}
+            headerStyle: {
+              backgroundColor: theme.card,
+            },
+            headerTintColor: theme.text,
+            headerLeft: () => <HeaderLeft />,
+          })}
         >
-          <Stack.Screen name="Main" component={TabNavigator} />
-          <Stack.Screen name="MovieDetail" component={MovieDetailScreen} />
-          <Stack.Screen name="ProfileEdit" component={ProfileEditScreen} />
+          <Stack.Screen
+            name="Main"
+            component={TabNavigator}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="MovieDetail"
+            component={MovieDetailScreen}
+            options={{ headerTitle: "Movie Details", headerShown: false }}
+          />
+          <Stack.Screen
+            name="ProfileEdit"
+            component={ProfileEditScreen}
+            options={{ headerTitle: "Edit Profile" }}
+          />
           <Stack.Screen
             name="NotificationSettings"
             component={NotificationSettingsScreen}
+            options={{ headerTitle: "Notifications" }}
           />
           <Stack.Screen
             name="PrivacySettings"
             component={PrivacySettingsScreen}
+            options={{ headerTitle: "Privacy" }}
           />
         </Stack.Navigator>
       ) : (

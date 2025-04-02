@@ -17,6 +17,7 @@ import { useTheme } from "../../contexts/ThemeContext";
 import { doc, updateDoc } from "firebase/firestore";
 import { updateProfile } from "firebase/auth";
 import { db } from "../../../firebase";
+import BackButton from "../../components/BackButton";
 
 const ProfileEditScreen: React.FC = () => {
   const navigation = useNavigation();
@@ -62,18 +63,6 @@ const ProfileEditScreen: React.FC = () => {
     <SafeAreaView
       style={[styles.container, { backgroundColor: theme.background }]}
     >
-      <View style={[styles.header, { backgroundColor: theme.card }]}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
-          <Ionicons name="arrow-back" size={24} color={theme.text} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: theme.text }]}>
-          Edit Profile
-        </Text>
-        <View style={styles.rightPlaceholder} />
-      </View>
 
       <ScrollView style={styles.content}>
         <View style={[styles.avatarSection, { backgroundColor: theme.card }]}>
@@ -156,12 +145,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 1,
   },
-  backButton: {
-    padding: 8,
-  },
   headerTitle: {
     fontSize: 18,
     fontWeight: "bold",
+    flex: 1,
+    textAlign: "center",
   },
   rightPlaceholder: {
     width: 40,

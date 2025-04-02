@@ -16,6 +16,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import { useTheme } from "../../contexts/ThemeContext";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { db } from "../../../firebase";
+import BackButton from "../../components/BackButton";
 
 interface PrivacySettings {
   showWatchHistory: boolean;
@@ -136,12 +137,7 @@ const PrivacySettingsScreen: React.FC = () => {
         style={[styles.container, { backgroundColor: theme.background }]}
       >
         <View style={[styles.header, { backgroundColor: theme.card }]}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
-          >
-            <Ionicons name="arrow-back" size={24} color={theme.text} />
-          </TouchableOpacity>
+          <BackButton />
           <Text style={[styles.headerTitle, { color: theme.text }]}>
             Privacy
           </Text>
@@ -158,16 +154,6 @@ const PrivacySettingsScreen: React.FC = () => {
     <SafeAreaView
       style={[styles.container, { backgroundColor: theme.background }]}
     >
-      <View style={[styles.header, { backgroundColor: theme.card }]}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
-          <Ionicons name="arrow-back" size={24} color={theme.text} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: theme.text }]}>Privacy</Text>
-        <View style={styles.rightPlaceholder} />
-      </View>
 
       <ScrollView style={styles.content}>
         <View style={[styles.section, { backgroundColor: theme.card }]}>
@@ -370,12 +356,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 1,
   },
-  backButton: {
-    padding: 8,
-  },
   headerTitle: {
     fontSize: 18,
     fontWeight: "bold",
+    flex: 1,
+    textAlign: "center",
   },
   rightPlaceholder: {
     width: 40,
