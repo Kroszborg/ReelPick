@@ -6,7 +6,8 @@
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "install": "npm install --legacy-peer-deps"
   },
   "dependencies": {
     "@expo/webpack-config": "^19.0.1",
@@ -30,7 +31,8 @@
     "react-native-screens": "^4.10.0",
     "react-native-vector-icons": "^10.2.0",
     "react-native-web": "^0.19.13",
-    "reelpick": "file:"
+    "reelpick": "file:",
+    "expo-dev-client": "~5.0.17"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

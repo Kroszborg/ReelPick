@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "ReelPick",
-    "slug": "ReelPick",
+    "slug": "reelpick",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -13,16 +13,27 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.kroszborg.reelpick",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "com.kroszborg.reelpick"
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "3026f4cd-e990-47de-9e4f-e83843361add"
+      }
+    },
+    "owner": "kroszborg"
   }
 }
